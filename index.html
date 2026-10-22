@@ -17,24 +17,22 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* Настраиваем body так, чтобы карта всегда была по центру экрана */
         body {
             background-color: var(--bg);
             color: var(--text);
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             width: 100vw;
             height: 100vh;
-            height: 100dvh; /* Для мобильных браузеров */
+            height: 100dvh;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Запрещаем прокрутку страницы */
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             background-image: radial-gradient(circle at 50% 0%, #0d1f22 0%, var(--bg) 70%);
         }
 
-        /* Контейнер карты (занимает весь экран, обрезает зум) */
         .map-wrapper {
             position: relative;
             width: 100%;
@@ -45,9 +43,9 @@
             overflow: hidden;
             cursor: default;
             background: transparent;
+            touch-action: none;
         }
 
-        /* Внутренний контейнер, который оборачивает картинку ровно по её размеру */
         .map-inner {
             position: relative;
             display: inline-block;
@@ -56,11 +54,10 @@
             line-height: 0;
         }
 
-        /* Карта автоматически подстраивается под экран, сохраняя пропорции */
         .map-inner img {
             display: block;
-            max-width: 95vw;  /* Не больше 95% ширины экрана */
-            max-height: 95vh; /* Не больше 95% высоты экрана */
+            max-width: 95vw;
+            max-height: 95vh;
             width: auto;
             height: auto;
             user-select: none;
@@ -74,7 +71,6 @@
             --point-scale: 1; 
         }
 
-        /* Точки с портретами */
         .point {
             position: absolute;
             width: 48px; height: 48px;
@@ -160,6 +156,7 @@
             width: 30px; height: 30px; border-radius: 50%;
             cursor: pointer; display: flex; justify-content: center; align-items: center;
             transition: all 0.3s ease;
+            z-index: 10;
         }
         .close-btn:hover { color: #fff; background: rgba(239, 68, 68, 0.2); transform: rotate(90deg); }
 
@@ -184,8 +181,8 @@
         .wiki-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500; padding: 6px 12px; border-radius: 8px; background: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); transition: all 0.2s; }
         .wiki-link:hover { background: rgba(20, 184, 166, 0.15); }
 
-        /* Мобильная адаптация (карточка выезжает снизу) */
-        @media (max-width: 768px) {
+        /* Мобильная адаптация: Портретный режим (выезжает снизу) */
+        @media (max-width: 768px) and (orientation: portrait) {
             #popover {
                 width: 100%; max-width: 100%;
                 left: 0 !important; right: 0 !important;
@@ -194,16 +191,43 @@
                 padding: 25px 20px;
                 transform: none !important;
                 transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+                max-height: 70vh;
+                overflow-y: auto;
             }
             #popover.active { bottom: 0; opacity: 1; }
             #popover::after { display: none; }
             .point { width: 42px; height: 42px; }
         }
+
+        /* Мобильная адаптация: Ландшафтный режим (выезжает справа) */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #popover {
+                width: 320px;
+                max-height: 90vh;
+                left: auto !important;
+                right: 15px;
+                top: 50% !important;
+                bottom: auto !important;
+                border-radius: 16px;
+                padding: 15px;
+                transform: translateY(-50%) translateX(120%);
+                opacity: 0;
+                transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+                overflow-y: auto;
+            }
+            #popover.active {
+                transform: translateY(-50%) translateX(0);
+                opacity: 1;
+            }
+            #popover::after { display: none; }
+            .popover-header { flex-direction: column; text-align: center; gap: 10px; }
+            .modal-title { font-size: 16px; }
+            .modal-desc { font-size: 12px; }
+            .point { width: 38px; height: 38px; }
+        }
     </style>
 </head>
 <body>
-
-    <!-- Заголовок убран -->
 
     <div class="map-wrapper" id="map-wrapper">
         <div class="map-inner" id="map-inner">
@@ -212,7 +236,6 @@
         </div>
     </div>
 
-    <!-- Карточка (Popover) -->
     <div id="popover">
         <button class="close-btn" onclick="closePopover()">×</button>
         <div class="popover-header">
@@ -239,86 +262,16 @@
 
     <script>
         const defaultPeople = [
-            {
-                id: 1, name: "Иммануил Кант", years: "1724–1804", nat: "Немец", cat: "Философия",
-                loc: "Памятник И. Канту в Калининграде (сквер перед БФУ им. Канта)",
-                desc: "Родоначальник немецкой классической философии, создатель «трансцендентального идеализма». Всю жизнь провёл в Кёнигсберге (ныне Калининград), практически не покидая город. Его труды по этике, гносеологии и эстетике оказали колоссальное влияние на всю мировую философию. Памятник работы Х.-Д. Рауха был восстановлен в 1992 году.",
-                left: "9.27%", top: "21.48%",
-                img: "img/kant.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Кант,_Иммануил"
-            },
-            {
-                id: 2, name: "Михаил Ломоносов", years: "1711–1765", nat: "Помор", cat: "Наука",
-                loc: "Памятник М. В. Ломоносову в Архангельске (перед АГТУ)",
-                desc: "Первый русский учёный-естествоиспытатель мирового значения, энциклопедист, химик и физик. Выходец из семьи поморов, пешком добрался до Москвы, чтобы получить образование. Основал Московский университет. Первый памятник Ломоносову в России был открыт в Архангельске в 1832 году.",
-                left: "25.64%", top: "31.49%",
-                img: "img/lomonosov.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Ломоносов,_Михаил_Васильевич"
-            },
-            {
-                id: 3, name: "Кузебай Герд", years: "1898–1937", nat: "Удмурт", cat: "Литература",
-                loc: "Памятник К. Герду в Ижевске (ул. Коммунаров, у Национального музея УР)",
-                desc: "Великий удмуртский поэт, прозаик, фольклорист и просветитель. Один из основоположников удмуртской национальной литературы. Трагически погиб в годы сталинских репрессий. Памятник в Ижевске установлен рядом с Национальным музеем Удмуртии.",
-                left: "25.37%", top: "50.69%",
-                img: "img/gerd.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Герд,_Кузебай"
-            },
-            {
-                id: 4, name: "Марат Сафин", years: "род. 1980", nat: "Татарин", cat: "Спорт",
-                loc: "Теннисный центр в Казани (место проведения турниров при поддержке М. Сафина)",
-                desc: "Один из самых титулованных российских теннисистов, экс-первая ракетка мира. Победитель двух турниров «Большого шлема» (Australian Open и US Open), двукратный обладатель Кубка Дэвиса. Татарин по национальности, активно поддерживает развитие тенниса в Казани.",
-                left: "29.00%", top: "46.32%",
-                img: "img/safin.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Сафин,_Марат_Мубинович"
-            },
-            {
-                id: 5, name: "Кирсан Илюмжинов", years: "род. 1962", nat: "Калмык", cat: "Политика, спорт",
-                loc: "Памятник «Планета 5570 „Кирсан“» в Элисте",
-                desc: "Российский государственный и спортивный деятель, первый президент Республики Калмыкия (1993–2005). В 1995 году был избран президентом Международной шахматной федерации (ФИДЕ). В Элисте в его честь установлен памятник «Планета 5570 «Кирсан»».",
-                left: "9.45%", top: "61.16%",
-                img: "img/ilyumzhinov.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Илюмжинов,_Кирсан_Николаевич"
-            },
-            {
-                id: 6, name: "Вероника Дударова", years: "1916–2009", nat: "Осетинка", cat: "Музыка",
-                loc: "Бюст в фойе Московской консерватории; памятник на могиле (Троекуровское кладбище)",
-                desc: "Первая в СССР женщина-дирижёр, народная артистка СССР. Более 50 лет руководила крупнейшими симфоническими оркестрами, попав за это в Книгу рекордов Гиннесса. Осетинка по национальности, родилась в Баку, но всю жизнь посвятила российскому музыкальному искусству.",
-                left: "5.09%", top: "63.47%",
-                img: "img/dudarova.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Дударова,_Вероника_Борисовна"
-            },
-            {
-                id: 7, name: "Доржи Банзаров", years: "1822–1855", nat: "Бурят", cat: "Наука",
-                loc: "Памятник Д. Банзарову в Улан-Удэ (ул. Ранжурова, у БГПИ)",
-                desc: "Первый бурятский учёный, получивший высшее образование западного образца. Окончил Казанский университет, где изучал восточные языки и защитил диссертацию по шаманизму. Считается основоположником бурятской научной интеллигенции. Памятник установлен в 1957 году.",
-                left: "61.27%", top: "82.61%",
-                img: "img/banzarov.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Банзаров,_Доржи"
-            },
-            {
-                id: 8, name: "Фёдор Попов", years: "1921–1943", nat: "Якут", cat: "Герой войны",
-                loc: "Памятник и сквер им. Ф. К. Попова в Якутске (открыт в 2025 г.)",
-                desc: "Первый якут, удостоенный звания Героя Советского Союза. Красноармеец, отличившийся при форсировании реки Днепр в 1943 году. Погиб от смертельного ранения в бою, звание присвоено посмертно. В 2025 году в Якутске открыт памятник и сквер его имени.",
-                left: "72.08%", top: "53.51%",
-                img: "img/popov.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Попов,_Фёдор_Кузьмич"
-            },
-            {
-                id: 9, name: "Валентина Вэкэт", years: "род. 1934", nat: "Чукчанка", cat: "Литература",
-                loc: "Дом народного творчества в Анадыре (чествование, выставки)",
-                desc: "Чукотская поэтесса, прозаик и народный мастер декоративно-прикладного искусства. Родилась в селе Уэлен в семье морского охотника. В своих книгах на родном языке сохраняет и передаёт традиции коренных народов Чукотки. Лауреат литературной премии им. Юрия Рытхэу.",
-                left: "87.18%", top: "6.94%",
-                img: "img/veket.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Вэкэт,_Валентина"
-            },
-            {
-                id: 10, name: "Исаак Левитан", years: "1860–1900", nat: "Еврей", cat: "Живопись",
-                loc: "Могила на Новодевичьем кладбище; Дом-мастерская в Москве",
-                desc: "Выдающийся русский художник-пейзажист, академик пейзажной живописи. Родился в бедной еврейской семье, но благодаря таланту стал одним из самых признанных мастеров лирического пейзажа. Его работы («Золотая осень», «Над вечным покоем») хранятся в Третьяковской галерее. Похоронен на Новодевичьем кладбище.",
-                left: "15.00%", top: "39.70%",
-                img: "img/levitan.jpg",
-                wiki: "https://ru.wikipedia.org/wiki/Левитан,_Исаак_Ильич"
-            }
+            { id: 1, name: "Иммануил Кант", years: "1724–1804", nat: "Немец", cat: "Философия", loc: "Памятник И. Канту в Калининграде (сквер перед БФУ им. Канта)", desc: "Родоначальник немецкой классической философии, создатель «трансцендентального идеализма». Всю жизнь провёл в Кёнигсберге (ныне Калининград), практически не покидая город. Его труды по этике, гносеологии и эстетике оказали колоссальное влияние на всю мировую философию. Памятник работы Х.-Д. Рауха был восстановлен в 1992 году.", left: "9.27%", top: "21.48%", img: "img/kant.jpg", wiki: "https://ru.wikipedia.org/wiki/Кант,_Иммануил" },
+            { id: 2, name: "Михаил Ломоносов", years: "1711–1765", nat: "Помор", cat: "Наука", loc: "Памятник М. В. Ломоносову в Архангельске (перед АГТУ)", desc: "Первый русский учёный-естествоиспытатель мирового значения, энциклопедист, химик и физик. Выходец из семьи поморов, пешком добрался до Москвы, чтобы получить образование. Основал Московский университет. Первый памятник Ломоносову в России был открыт в Архангельске в 1832 году.", left: "25.64%", top: "31.49%", img: "img/lomonosov.jpg", wiki: "https://ru.wikipedia.org/wiki/Ломоносов,_Михаил_Васильевич" },
+            { id: 3, name: "Кузебай Герд", years: "1898–1937", nat: "Удмурт", cat: "Литература", loc: "Памятник К. Герду в Ижевске (ул. Коммунаров, у Национального музея УР)", desc: "Великий удмуртский поэт, прозаик, фольклорист и просветитель. Один из основоположников удмуртской национальной литературы. Трагически погиб в годы сталинских репрессий. Памятник в Ижевске установлен рядом с Национальным музеем Удмуртии.", left: "25.37%", top: "50.69%", img: "img/gerd.jpg", wiki: "https://ru.wikipedia.org/wiki/Герд,_Кузебай" },
+            { id: 4, name: "Марат Сафин", years: "род. 1980", nat: "Татарин", cat: "Спорт", loc: "Теннисный центр в Казани (место проведения турниров при поддержке М. Сафина)", desc: "Один из самых титулованных российских теннисистов, экс-первая ракетка мира. Победитель двух турниров «Большого шлема» (Australian Open и US Open), двукратный обладатель Кубка Дэвиса. Татарин по национальности, активно поддерживает развитие тенниса в Казани.", left: "29.00%", top: "46.32%", img: "img/safin.jpg", wiki: "https://ru.wikipedia.org/wiki/Сафин,_Марат_Мубинович" },
+            { id: 5, name: "Кирсан Илюмжинов", years: "род. 1962", nat: "Калмык", cat: "Политика, спорт", loc: "Памятник «Планета 5570 „Кирсан“» в Элисте", desc: "Российский государственный и спортивный деятель, первый президент Республики Калмыкия (1993–2005). В 1995 году был избран президентом Международной шахматной федерации (ФИДЕ). В Элисте в его честь установлен памятник «Планета 5570 «Кирсан»».", left: "9.45%", top: "61.16%", img: "img/ilyumzhinov.jpg", wiki: "https://ru.wikipedia.org/wiki/Илюмжинов,_Кирсан_Николаевич" },
+            { id: 6, name: "Вероника Дударова", years: "1916–2009", nat: "Осетинка", cat: "Музыка", loc: "Бюст в фойе Московской консерватории; памятник на могиле (Троекуровское кладбище)", desc: "Первая в СССР женщина-дирижёр, народная артистка СССР. Более 50 лет руководила крупнейшими симфоническими оркестрами, попав за это в Книгу рекордов Гиннесса. Осетинка по национальности, родилась в Баку, но всю жизнь посвятила российскому музыкальному искусству.", left: "5.09%", top: "63.47%", img: "img/dudarova.jpg", wiki: "https://ru.wikipedia.org/wiki/Дударова,_Вероника_Борисовна" },
+            { id: 7, name: "Доржи Банзаров", years: "1822–1855", nat: "Бурят", cat: "Наука", loc: "Памятник Д. Банзарову в Улан-Удэ (ул. Ранжурова, у БГПИ)", desc: "Первый бурятский учёный, получивший высшее образование западного образца. Окончил Казанский университет, где изучал восточные языки и защитил диссертацию по шаманизму. Считается основоположником бурятской научной интеллигенции. Памятник установлен в 1957 году.", left: "61.27%", top: "82.61%", img: "img/banzarov.jpg", wiki: "https://ru.wikipedia.org/wiki/Банзаров,_Доржи" },
+            { id: 8, name: "Фёдор Попов", years: "1921–1943", nat: "Якут", cat: "Герой войны", loc: "Памятник и сквер им. Ф. К. Попова в Якутске (открыт в 2025 г.)", desc: "Первый якут, удостоенный звания Героя Советского Союза. Красноармеец, отличившийся при форсировании реки Днепр в 1943 году. Погиб от смертельного ранения в бою, звание присвоено посмертно. В 2025 году в Якутске открыт памятник и сквер его имени.", left: "72.08%", top: "53.51%", img: "img/popov.jpg", wiki: "https://ru.wikipedia.org/wiki/Попов,_Фёдор_Кузьмич" },
+            { id: 9, name: "Валентина Вэкэт", years: "род. 1934", nat: "Чукчанка", cat: "Литература", loc: "Дом народного творчества в Анадыре (чествование, выставки)", desc: "Чукотская поэтесса, прозаик и народный мастер декоративно-прикладного искусства. Родилась в селе Уэлен в семье морского охотника. В своих книгах на родном языке сохраняет и передаёт традиции коренных народов Чукотки. Лауреат литературной премии им. Юрия Рытхэу.", left: "87.18%", top: "6.94%", img: "img/veket.jpg", wiki: "https://ru.wikipedia.org/wiki/Вэкэт,_Валентина" },
+            { id: 10, name: "Исаак Левитан", years: "1860–1900", nat: "Еврей", cat: "Живопись", loc: "Могила на Новодевичьем кладбище; Дом-мастерская в Москве", desc: "Выдающийся русский художник-пейзажист, академик пейзажной живописи. Родился в бедной еврейской семье, но благодаря таланту стал одним из самых признанных мастеров лирического пейзажа. Его работы («Золотая осень», «Над вечным покоем») хранятся в Третьяковской галерее. Похоронен на Новодевичьем кладбище.", left: "15.00%", top: "39.70%", img: "img/levitan.jpg", wiki: "https://ru.wikipedia.org/wiki/Левитан,_Исаак_Ильич" }
         ];
 
         let people = [];
@@ -348,10 +301,7 @@
                     const img = document.createElement('img');
                     img.src = p.img;
                     img.alt = p.name;
-                    img.onerror = () => {
-                        img.remove();
-                        addFallback(el, p.name);
-                    };
+                    img.onerror = () => { img.remove(); addFallback(el, p.name); };
                     el.appendChild(img);
                 } else {
                     addFallback(el, p.name);
@@ -407,14 +357,29 @@
             popover.style.display = 'block';
             requestAnimationFrame(() => popover.classList.add('active'));
 
+            // Зум карты
             const targetScale = 2.2;
             const pointX = (parseFloat(person.left) / 100) * inner.offsetWidth;
             const pointY = (parseFloat(person.top) / 100) * inner.offsetHeight;
 
             const wrapperRect = wrapper.getBoundingClientRect();
-            const targetCenterY = window.innerHeight / 2 - 80; 
+            
+            // === УМНОЕ ПОЗИЦИОНИРОВАНИЕ ДЛЯ РАЗНЫХ ЭКРАНОВ ===
+            const isMobilePortrait = window.innerWidth <= 768 && window.matchMedia("(orientation: portrait)").matches;
+            const isMobileLandscape = window.matchMedia("(max-height: 500px) and (orientation: landscape)").matches;
 
-            tx = (wrapperRect.width / 2) - (pointX * targetScale);
+            // Базовая позиция по умолчанию (ПК)
+            let targetCenterX = wrapperRect.width / 2;
+            let targetCenterY = window.innerHeight / 2 - 80;
+
+            if (isMobilePortrait) {
+                targetCenterY = window.innerHeight * -0.1; // Сдвигаем вверх для вертикального экрана
+            } else if (isMobileLandscape) {
+                targetCenterX = wrapperRect.width * 0.2; // Сдвигаем влево для горизонтального
+                targetCenterY = window.innerHeight / 2;   // Центрируем по вертикали
+            }
+
+            tx = targetCenterX - (pointX * targetScale);
             ty = targetCenterY - wrapperRect.top - (pointY * targetScale);
             
             scale = targetScale;
@@ -432,7 +397,9 @@
 
         function updatePopoverPosition() {
             if (!activePointEl || !popover.classList.contains('active')) return;
-            if (window.innerWidth <= 768) return;
+            
+            // Пропускаем JS-позиционирование для мобильных (там работает CSS)
+            if (window.innerWidth <= 768 || window.matchMedia("(max-height: 500px)").matches) return;
 
             const rect = activePointEl.getBoundingClientRect();
             const popRect = popover.getBoundingClientRect();
@@ -471,6 +438,65 @@
             inner.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
             container.style.setProperty('--point-scale', (1 / scale).toFixed(3));
         }
+
+        // ===== УПРАВЛЕНИЕ ДВУМЯ ПАЛЬЦАМИ (PAN + ZOOM) =====
+        let isPinching = false;
+        let startDist = 0, startScale = 1;
+        let startCenterX = 0, startCenterY = 0;
+        let startTx = 0, startTy = 0;
+
+        wrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                if (popover.classList.contains('active')) closePopover();
+                
+                isPinching = true;
+                const t1 = e.touches[0], t2 = e.touches[1];
+                
+                startDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                startScale = scale;
+                startTx = tx;
+                startTy = ty;
+                
+                startCenterX = (t1.clientX + t2.clientX) / 2;
+                startCenterY = (t1.clientY + t2.clientY) / 2;
+                
+                inner.style.transition = 'none';
+            }
+        }, { passive: false });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (isPinching && e.touches.length === 2) {
+                e.preventDefault();
+                const t1 = e.touches[0], t2 = e.touches[1];
+                
+                const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                const scaleFactor = dist / startDist;
+                let newScale = Math.max(1, Math.min(startScale * scaleFactor, 5));
+
+                const currentCenterX = (t1.clientX + t2.clientX) / 2;
+                const currentCenterY = (t1.clientY + t2.clientY) / 2;
+                const panX = currentCenterX - startCenterX;
+                const panY = currentCenterY - startCenterY;
+
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const x = startCenterX - wrapperRect.left;
+                const y = startCenterY - wrapperRect.top;
+
+                tx = x - (x - startTx) * (newScale / startScale) + panX;
+                ty = y - (y - startTy) * (newScale / startScale) + panY;
+                scale = newScale;
+
+                updateTransform();
+            }
+        }, { passive: false });
+
+        wrapper.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2 && isPinching) {
+                isPinching = false;
+                inner.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+            }
+        });
 
         wrapper.addEventListener('click', (e) => {
             if (!e.target.closest('.point')) {
