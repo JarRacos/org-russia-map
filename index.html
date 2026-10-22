@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>10 личностей России</title>
     <style>
         :root {
@@ -17,63 +17,52 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* Настраиваем body так, чтобы карта всегда была по центру экрана */
         body {
             background-color: var(--bg);
             color: var(--text);
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh; /* Для мобильных браузеров */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Запрещаем прокрутку страницы */
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 20px;
-            overflow-x: hidden;
             background-image: radial-gradient(circle at 50% 0%, #0d1f22 0%, var(--bg) 70%);
         }
 
-        .header-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
-            width: 100%;
-            max-width: 1100px;
-            z-index: 10;
-        }
-
-        h1 {
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            text-align: center;
-            color: #fff;
-            text-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        /* Контейнер карты */
+        /* Контейнер карты (занимает весь экран, обрезает зум) */
         .map-wrapper {
             position: relative;
             width: 100%;
-            max-width: 1100px;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
             cursor: default;
             background: transparent;
         }
 
-        /* Внутренний контейнер для зума */
+        /* Внутренний контейнер, который оборачивает картинку ровно по её размеру */
         .map-inner {
             position: relative;
-            width: 100%;
+            display: inline-block;
             transform-origin: 0 0;
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-            display: inline-block;
             line-height: 0;
         }
 
+        /* Карта автоматически подстраивается под экран, сохраняя пропорции */
         .map-inner img {
-            width: 100%;
             display: block;
+            max-width: 95vw;  /* Не больше 95% ширины экрана */
+            max-height: 95vh; /* Не больше 95% высоты экрана */
+            width: auto;
+            height: auto;
             user-select: none;
             -webkit-user-drag: none;
         }
@@ -82,7 +71,7 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
-            --point-scale: 1; /* Переменная для компенсации зума флажков */
+            --point-scale: 1; 
         }
 
         /* Точки с портретами */
@@ -91,7 +80,6 @@
             width: 48px; height: 48px;
             border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            /* Флажок остается 48px независимо от масштаба карты */
             transform: translate(-50%, -50%) scale(var(--point-scale));
             cursor: pointer;
             border: 3px solid var(--accent);
@@ -127,7 +115,7 @@
             z-index: 20;
         }
 
-        /* Карточка (Popover) - вынесена наружу, чтобы её не обрезало краями карты */
+        /* Карточка (Popover) */
         #popover {
             position: fixed;
             width: 380px;
@@ -215,13 +203,10 @@
 </head>
 <body>
 
-    <div class="header-area">
-        <h1>10 личностей России</h1>
-    </div>
+    <!-- Заголовок убран -->
 
     <div class="map-wrapper" id="map-wrapper">
         <div class="map-inner" id="map-inner">
-            <!-- Берем карту из папки img, если там нет — ищем в корне -->
             <img src="img/map.png" alt="Карта России" onerror="this.src='map.png'">
             <div id="points-container"></div>
         </div>
@@ -253,7 +238,6 @@
     </div>
 
     <script>
-        // Массив с локальными путями к картинкам в папке img/
         const defaultPeople = [
             {
                 id: 1, name: "Иммануил Кант", years: "1724–1804", nat: "Немец", cat: "Философия",
@@ -347,7 +331,6 @@
         const popover = document.getElementById('popover');
 
         function init() {
-            // Ключ _v3, чтобы сбросить старый кэш с интернет-ссылками
             const saved = localStorage.getItem('mapCoordinates_v3');
             people = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultPeople));
             renderPoints();
@@ -365,7 +348,6 @@
                     const img = document.createElement('img');
                     img.src = p.img;
                     img.alt = p.name;
-                    // Если локальная картинка не найдена, показываем инициалы
                     img.onerror = () => {
                         img.remove();
                         addFallback(el, p.name);
@@ -425,7 +407,6 @@
             popover.style.display = 'block';
             requestAnimationFrame(() => popover.classList.add('active'));
 
-            // Зум карты
             const targetScale = 2.2;
             const pointX = (parseFloat(person.left) / 100) * inner.offsetWidth;
             const pointY = (parseFloat(person.top) / 100) * inner.offsetHeight;
@@ -439,7 +420,6 @@
             scale = targetScale;
             updateTransform();
 
-            // Анимация полета карточки вместе с точкой
             const startTime = performance.now();
             function animatePopover() {
                 updatePopoverPosition();
@@ -452,7 +432,7 @@
 
         function updatePopoverPosition() {
             if (!activePointEl || !popover.classList.contains('active')) return;
-            if (window.innerWidth <= 768) return; // На телефонах карточка прибита к низу
+            if (window.innerWidth <= 768) return;
 
             const rect = activePointEl.getBoundingClientRect();
             const popRect = popover.getBoundingClientRect();
@@ -489,7 +469,6 @@
 
         function updateTransform() {
             inner.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-            // Компенсируем зум, чтобы флажки не становились огромными
             container.style.setProperty('--point-scale', (1 / scale).toFixed(3));
         }
 
