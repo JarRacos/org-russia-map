@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10 личностей России</title>
+    <style>
+        :root {
+            --bg: #070e10;
+            --panel: #0f1a1e;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
+            --border: #1e293b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #0d1f22 0%, var(--bg) 70%);
+        }
+
+        .header-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            width: 100%;
+            max-width: 1100px;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Контейнер карты */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            overflow: hidden;
+            cursor: default;
+            background: transparent;
+        }
+
+        /* Внутренний контейнер для зума */
+        .map-inner {
+            position: relative;
+            width: 100%;
+            transform-origin: 0 0;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            display: inline-block;
+            line-height: 0;
+        }
+
+        .map-inner img {
+            width: 100%;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        #points-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            --point-scale: 1; /* Переменная для компенсации зума флажков */
+        }
+
+        /* Точки с портретами */
+        .point {
+            position: absolute;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            /* Флажок остается 48px независимо от масштаба карты */
+            transform: translate(-50%, -50%) scale(var(--point-scale));
+            cursor: pointer;
+            border: 3px solid var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.6), 0 0 20px var(--accent-glow);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+            z-index: 10;
+            user-select: none;
+            pointer-events: auto;
+            overflow: hidden;
+            background: #111;
+        }
+
+        .point img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .point .fallback-initials {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: 700; font-size: 16px; color: var(--accent);
+            background: radial-gradient(circle at center, #183a40 0%, #0f1a1e 100%);
+            border-radius: 50%;
+            letter-spacing: 0.05em;
+        }
+
+        .point:hover {
+            transform: translate(-50%, -50%) scale(calc(var(--point-scale) * 1.2));
+            box-shadow: 0 0 0 4px #fff, 0 0 30px var(--accent);
+            z-index: 20;
+        }
+
+        /* Карточка (Popover) - вынесена наружу, чтобы её не обрезало краями карты */
+        #popover {
+            position: fixed;
+            width: 380px;
+            background: linear-gradient(145deg, #0f1a1e, #091115);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9), 0 0 30px rgba(20, 184, 166, 0.1);
+            opacity: 0;
+            transform: translateY(10px) scale(0.95);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1000;
+            pointer-events: auto;
+            display: none;
+        }
+
+        #popover.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        #popover::after {
+            content: '';
+            position: absolute;
+            bottom: -8px; left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(20, 184, 166, 0.3) transparent transparent transparent;
+        }
+        #popover.below::after {
+            bottom: auto; top: -8px;
+            border-width: 0 8px 8px;
+            border-color: transparent transparent rgba(20, 184, 166, 0.3) transparent;
+        }
+
+        .close-btn {
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(255,255,255,0.05); border: none;
+            color: var(--muted); font-size: 18px;
+            width: 30px; height: 30px; border-radius: 50%;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: all 0.3s ease;
+        }
+        .close-btn:hover { color: #fff; background: rgba(239, 68, 68, 0.2); transform: rotate(90deg); }
+
+        .popover-header { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+        .popover-portrait { width: 70px; height: 70px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent); flex-shrink: 0; background: #111; }
+        .popover-portrait img { width: 100%; height: 100%; object-fit: cover; }
+        .popover-title-block { flex-grow: 1; }
+        
+        .modal-title { font-size: 18px; margin-bottom: 3px; color: var(--accent); font-weight: 700; text-shadow: 0 0 15px var(--accent-glow); }
+        .modal-years { font-size: 12px; color: var(--muted); font-weight: 500; }
+        
+        .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+        .tag { 
+            font-size: 11px; padding: 4px 10px; border-radius: 99px; 
+            background: rgba(20, 184, 166, 0.1); color: var(--accent); 
+            border: 1px solid rgba(20, 184, 166, 0.2); font-weight: 500;
+            text-transform: capitalize;
+        }
+        .modal-desc { font-size: 13.5px; line-height: 1.6; color: #cbd5e1; margin-bottom: 15px; }
+        .modal-location { font-size: 12px; color: var(--text); display: flex; align-items: flex-start; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); font-weight: 500; margin-bottom: 12px; }
+        .modal-location svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+        .wiki-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500; padding: 6px 12px; border-radius: 8px; background: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); transition: all 0.2s; }
+        .wiki-link:hover { background: rgba(20, 184, 166, 0.15); }
+
+        /* Мобильная адаптация (карточка выезжает снизу) */
+        @media (max-width: 768px) {
+            #popover {
+                width: 100%; max-width: 100%;
+                left: 0 !important; right: 0 !important;
+                bottom: -100%; top: auto !important;
+                border-radius: 24px 24px 0 0;
+                padding: 25px 20px;
+                transform: none !important;
+                transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+            }
+            #popover.active { bottom: 0; opacity: 1; }
+            #popover::after { display: none; }
+            .point { width: 42px; height: 42px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-area">
+        <h1>10 личностей России</h1>
+    </div>
+
+    <div class="map-wrapper" id="map-wrapper">
+        <div class="map-inner" id="map-inner">
+            <!-- Берем карту из папки img, если там нет — ищем в корне -->
+            <img src="img/map.png" alt="Карта России" onerror="this.src='map.png'">
+            <div id="points-container"></div>
+        </div>
+    </div>
+
+    <!-- Карточка (Popover) -->
+    <div id="popover">
+        <button class="close-btn" onclick="closePopover()">×</button>
+        <div class="popover-header">
+            <div class="popover-portrait" id="m-portrait-container"></div>
+            <div class="popover-title-block">
+                <h2 class="modal-title" id="m-name"></h2>
+                <span class="modal-years" id="m-years"></span>
+            </div>
+        </div>
+        <div class="tags">
+            <span class="tag" id="m-nat"></span>
+            <span class="tag" id="m-cat"></span>
+        </div>
+        <p class="modal-desc" id="m-desc"></p>
+        <div class="modal-location">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="m-loc"></span>
+        </div>
+        <a href="#" id="m-wiki" class="wiki-link" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Статья в Википедии
+        </a>
+    </div>
+
+    <script>
+        // Массив с локальными путями к картинкам в папке img/
+        const defaultPeople = [
+            {
+                id: 1, name: "Иммануил Кант", years: "1724–1804", nat: "Немец", cat: "Философия",
+                loc: "Памятник И. Канту в Калининграде (сквер перед БФУ им. Канта)",
+                desc: "Родоначальник немецкой классической философии, создатель «трансцендентального идеализма». Всю жизнь провёл в Кёнигсберге (ныне Калининград), практически не покидая город. Его труды по этике, гносеологии и эстетике оказали колоссальное влияние на всю мировую философию. Памятник работы Х.-Д. Рауха был восстановлен в 1992 году.",
+                left: "9.27%", top: "21.48%",
+                img: "img/kant.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Кант,_Иммануил"
+            },
+            {
+                id: 2, name: "Михаил Ломоносов", years: "1711–1765", nat: "Помор", cat: "Наука",
+                loc: "Памятник М. В. Ломоносову в Архангельске (перед АГТУ)",
+                desc: "Первый русский учёный-естествоиспытатель мирового значения, энциклопедист, химик и физик. Выходец из семьи поморов, пешком добрался до Москвы, чтобы получить образование. Основал Московский университет. Первый памятник Ломоносову в России был открыт в Архангельске в 1832 году.",
+                left: "25.64%", top: "31.49%",
+                img: "img/lomonosov.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Ломоносов,_Михаил_Васильевич"
+            },
+            {
+                id: 3, name: "Кузебай Герд", years: "1898–1937", nat: "Удмурт", cat: "Литература",
+                loc: "Памятник К. Герду в Ижевске (ул. Коммунаров, у Национального музея УР)",
+                desc: "Великий удмуртский поэт, прозаик, фольклорист и просветитель. Один из основоположников удмуртской национальной литературы. Трагически погиб в годы сталинских репрессий. Памятник в Ижевске установлен рядом с Национальным музеем Удмуртии.",
+                left: "25.37%", top: "50.69%",
+                img: "img/gerd.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Герд,_Кузебай"
+            },
+            {
+                id: 4, name: "Марат Сафин", years: "род. 1980", nat: "Татарин", cat: "Спорт",
+                loc: "Теннисный центр в Казани (место проведения турниров при поддержке М. Сафина)",
+                desc: "Один из самых титулованных российских теннисистов, экс-первая ракетка мира. Победитель двух турниров «Большого шлема» (Australian Open и US Open), двукратный обладатель Кубка Дэвиса. Татарин по национальности, активно поддерживает развитие тенниса в Казани.",
+                left: "29.00%", top: "46.32%",
+                img: "img/safin.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Сафин,_Марат_Мубинович"
+            },
+            {
+                id: 5, name: "Кирсан Илюмжинов", years: "род. 1962", nat: "Калмык", cat: "Политика, спорт",
+                loc: "Памятник «Планета 5570 „Кирсан“» в Элисте",
+                desc: "Российский государственный и спортивный деятель, первый президент Республики Калмыкия (1993–2005). В 1995 году был избран президентом Международной шахматной федерации (ФИДЕ). В Элисте в его честь установлен памятник «Планета 5570 «Кирсан»».",
+                left: "9.45%", top: "61.16%",
+                img: "img/ilyumzhinov.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Илюмжинов,_Кирсан_Николаевич"
+            },
+            {
+                id: 6, name: "Вероника Дударова", years: "1916–2009", nat: "Осетинка", cat: "Музыка",
+                loc: "Бюст в фойе Московской консерватории; памятник на могиле (Троекуровское кладбище)",
+                desc: "Первая в СССР женщина-дирижёр, народная артистка СССР. Более 50 лет руководила крупнейшими симфоническими оркестрами, попав за это в Книгу рекордов Гиннесса. Осетинка по национальности, родилась в Баку, но всю жизнь посвятила российскому музыкальному искусству.",
+                left: "5.09%", top: "63.47%",
+                img: "img/dudarova.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Дударова,_Вероника_Борисовна"
+            },
+            {
+                id: 7, name: "Доржи Банзаров", years: "1822–1855", nat: "Бурят", cat: "Наука",
+                loc: "Памятник Д. Банзарову в Улан-Удэ (ул. Ранжурова, у БГПИ)",
+                desc: "Первый бурятский учёный, получивший высшее образование западного образца. Окончил Казанский университет, где изучал восточные языки и защитил диссертацию по шаманизму. Считается основоположником бурятской научной интеллигенции. Памятник установлен в 1957 году.",
+                left: "61.27%", top: "82.61%",
+                img: "img/banzarov.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Банзаров,_Доржи"
+            },
+            {
+                id: 8, name: "Фёдор Попов", years: "1921–1943", nat: "Якут", cat: "Герой войны",
+                loc: "Памятник и сквер им. Ф. К. Попова в Якутске (открыт в 2025 г.)",
+                desc: "Первый якут, удостоенный звания Героя Советского Союза. Красноармеец, отличившийся при форсировании реки Днепр в 1943 году. Погиб от смертельного ранения в бою, звание присвоено посмертно. В 2025 году в Якутске открыт памятник и сквер его имени.",
+                left: "72.08%", top: "53.51%",
+                img: "img/popov.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Попов,_Фёдор_Кузьмич"
+            },
+            {
+                id: 9, name: "Валентина Вэкэт", years: "род. 1934", nat: "Чукчанка", cat: "Литература",
+                loc: "Дом народного творчества в Анадыре (чествование, выставки)",
+                desc: "Чукотская поэтесса, прозаик и народный мастер декоративно-прикладного искусства. Родилась в селе Уэлен в семье морского охотника. В своих книгах на родном языке сохраняет и передаёт традиции коренных народов Чукотки. Лауреат литературной премии им. Юрия Рытхэу.",
+                left: "87.18%", top: "6.94%",
+                img: "img/veket.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Вэкэт,_Валентина"
+            },
+            {
+                id: 10, name: "Исаак Левитан", years: "1860–1900", nat: "Еврей", cat: "Живопись",
+                loc: "Могила на Новодевичьем кладбище; Дом-мастерская в Москве",
+                desc: "Выдающийся русский художник-пейзажист, академик пейзажной живописи. Родился в бедной еврейской семье, но благодаря таланту стал одним из самых признанных мастеров лирического пейзажа. Его работы («Золотая осень», «Над вечным покоем») хранятся в Третьяковской галерее. Похоронен на Новодевичьем кладбище.",
+                left: "15.00%", top: "39.70%",
+                img: "img/levitan.jpg",
+                wiki: "https://ru.wikipedia.org/wiki/Левитан,_Исаак_Ильич"
+            }
+        ];
+
+        let people = [];
+        let scale = 1, tx = 0, ty = 0;
+        let activePointEl = null;
+
+        const wrapper = document.getElementById('map-wrapper');
+        const inner = document.getElementById('map-inner');
+        const container = document.getElementById('points-container');
+        const popover = document.getElementById('popover');
+
+        function init() {
+            // Ключ _v3, чтобы сбросить старый кэш с интернет-ссылками
+            const saved = localStorage.getItem('mapCoordinates_v3');
+            people = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultPeople));
+            renderPoints();
+        }
+
+        function renderPoints() {
+            container.innerHTML = '';
+            people.forEach(p => {
+                const el = document.createElement('div');
+                el.className = 'point';
+                el.style.left = p.left;
+                el.style.top = p.top;
+
+                if (p.img && p.img.trim() !== '') {
+                    const img = document.createElement('img');
+                    img.src = p.img;
+                    img.alt = p.name;
+                    // Если локальная картинка не найдена, показываем инициалы
+                    img.onerror = () => {
+                        img.remove();
+                        addFallback(el, p.name);
+                    };
+                    el.appendChild(img);
+                } else {
+                    addFallback(el, p.name);
+                }
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openPopover(p, el);
+                });
+
+                container.appendChild(el);
+            });
+        }
+
+        function addFallback(el, name) {
+            const fallback = document.createElement('div');
+            fallback.className = 'fallback-initials';
+            fallback.textContent = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            el.appendChild(fallback);
+        }
+
+        function openPopover(person, el) {
+            if (activePointEl === el && popover.classList.contains('active')) {
+                closePopover();
+                return;
+            }
+            activePointEl = el;
+
+            document.getElementById('m-name').textContent = person.name;
+            document.getElementById('m-years').textContent = person.years;
+            document.getElementById('m-nat').textContent = person.nat;
+            document.getElementById('m-cat').textContent = person.cat;
+            document.getElementById('m-desc').textContent = person.desc;
+            document.getElementById('m-loc').textContent = person.loc;
+            document.getElementById('m-wiki').href = person.wiki;
+
+            const portraitContainer = document.getElementById('m-portrait-container');
+            portraitContainer.innerHTML = '';
+            
+            if (person.img && person.img.trim() !== '') {
+                const pImg = document.createElement('img');
+                pImg.src = person.img;
+                pImg.alt = person.name;
+                pImg.onerror = () => {
+                    pImg.remove();
+                    portraitContainer.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center, #183a40 0%, #0f1a1e 100%);color:var(--accent);font-weight:bold;font-size:20px;letter-spacing:0.05em;">${person.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>`;
+                };
+                portraitContainer.appendChild(pImg);
+            } else {
+                portraitContainer.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center, #183a40 0%, #0f1a1e 100%);color:var(--accent);font-weight:bold;font-size:20px;letter-spacing:0.05em;">${person.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>`;
+            }
+
+            popover.style.display = 'block';
+            requestAnimationFrame(() => popover.classList.add('active'));
+
+            // Зум карты
+            const targetScale = 2.2;
+            const pointX = (parseFloat(person.left) / 100) * inner.offsetWidth;
+            const pointY = (parseFloat(person.top) / 100) * inner.offsetHeight;
+
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const targetCenterY = window.innerHeight / 2 - 80; 
+
+            tx = (wrapperRect.width / 2) - (pointX * targetScale);
+            ty = targetCenterY - wrapperRect.top - (pointY * targetScale);
+            
+            scale = targetScale;
+            updateTransform();
+
+            // Анимация полета карточки вместе с точкой
+            const startTime = performance.now();
+            function animatePopover() {
+                updatePopoverPosition();
+                if (performance.now() - startTime < 650) {
+                    requestAnimationFrame(animatePopover);
+                }
+            }
+            requestAnimationFrame(animatePopover);
+        }
+
+        function updatePopoverPosition() {
+            if (!activePointEl || !popover.classList.contains('active')) return;
+            if (window.innerWidth <= 768) return; // На телефонах карточка прибита к низу
+
+            const rect = activePointEl.getBoundingClientRect();
+            const popRect = popover.getBoundingClientRect();
+            const margin = 15;
+
+            let x = rect.left + rect.width / 2 - popRect.width / 2;
+            let y = rect.top - popRect.height - 15;
+
+            if (x < margin) x = margin;
+            if (x + popRect.width > window.innerWidth - margin) {
+                x = window.innerWidth - popRect.width - margin;
+            }
+
+            if (y < margin) {
+                y = rect.bottom + 15;
+                popover.classList.add('below');
+            } else {
+                popover.classList.remove('below');
+            }
+
+            popover.style.left = x + 'px';
+            popover.style.top = y + 'px';
+        }
+
+        function closePopover() {
+            if (!popover.classList.contains('active')) return;
+            popover.classList.remove('active');
+            activePointEl = null;
+            setTimeout(() => { if (!popover.classList.contains('active')) popover.style.display = 'none'; }, 350);
+
+            scale = 1; tx = 0; ty = 0;
+            updateTransform();
+        }
+
+        function updateTransform() {
+            inner.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+            // Компенсируем зум, чтобы флажки не становились огромными
+            container.style.setProperty('--point-scale', (1 / scale).toFixed(3));
+        }
+
+        wrapper.addEventListener('click', (e) => {
+            if (!e.target.closest('.point')) {
+                closePopover();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (popover.classList.contains('active')) updatePopoverPosition();
+        });
+
+        init();
+    </script>
+</body>
+</html>
